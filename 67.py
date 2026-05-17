@@ -8,7 +8,7 @@ import numpy as np
 
 # 1. 무한 자동화 시스템 레이아웃 세팅
 st.set_page_config(page_title="무한 자동화 AI 분석 시스템", layout="wide")
-st.title("🤖 어떤 칸이든 다 분석하는 무한 자동화 AI 매출 예측 시스템")
+st.title(" PDF 날먹 생성기 ")
 st.write("엑셀에 '거래처', '지역', '담당자' 등 어떤 칸을 마음대로 추가해 올려도 코드를 고칠 필요 없이 자동 분석합니다.")
 
 # 2. 기초 데이터 세팅 (테스트용 기본 데이터 구조)
