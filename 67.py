@@ -95,7 +95,7 @@ if len(edited_df) >= 3:
 
     # 4. 임원용 PDF 종합 보고서 출력
     st.markdown("---")
-    st.subheader("📥 3단계: 최고경영자 보고용 AI 통합 분석 보고서 출력")
+    st.subheader("📥 3단계:보고서 출력")
     
     if st.button("📄 종합 PDF 보고서 생성하기"):
         try:
