@@ -77,7 +77,6 @@ if len(edited_df) >= 2:
     fig_col1, fig_col2 = st.columns(2)
     
     with fig_col1:
-        # 학생별로 선을 쪼개서 그리는 시계열 성장 추이 그래프 (회사 합산 버그 해결!)
         fig1 = px.line(
             df.sort_values(by='날짜'), 
             x='날짜', 
@@ -90,12 +89,18 @@ if len(edited_df) >= 2:
         st.plotly_chart(fig1, use_container_width=True)
         
     with fig_col2:
-        # 원형 그래프를 제거하고 성적 비교에 알맞은 막대그래프로 교체!
+        # 날짜 타입 변환 예외 처리 완료된 안전한 막대 차트
+        df_bar = df.sort_values(by='날짜').copy()
+        if ptypes := df_bar['날짜'].dtype:
+            df_bar['날짜_문자열'] = df_bar['날짜'].dt.strftime('%Y-%m-%d')
+        else:
+            df_bar['날짜_문자열'] = df_bar['날짜'].astype(str)
+            
         fig2 = px.bar(
-            df.sort_values(by='날짜'),
+            df_bar,
             x='이름',
             y=selected_subject,
-            color='날짜'.freeze() if df['날짜'].dtype == object else df['날짜'].dt.strftime('%Y-%m-%d'),
+            color='날짜_문자열',
             barmode='group',
             text=selected_subject,
             title=f'📊 학생별 [{selected_subject}] 시험별 점수 비교'
@@ -112,6 +117,7 @@ if len(edited_df) >= 2:
             import matplotlib.pyplot as plt
             import time
             
+            # 웹 차트 저장 시 운영체제별 한글 깨짐 대응 (맑은고딕 우선 적용)
             plt.rcParams['font.family'] = 'Malgun Gothic'
             plt.rcParams['axes.unicode_minus'] = False
             
@@ -132,7 +138,7 @@ if len(edited_df) >= 2:
             latest_date = df['날짜'].max()
             df_latest = df[df['날짜'] == latest_date]
             plt.bar(df_latest['이름'], df_latest[selected_subject], color='#1f77b4', alpha=0.8)
-            plt.title(f'최근 시험({latest_date.strftime("%Y-%m-%d")}) [{selected_subject}] 성적 비교')
+            plt.title(f'최근 시험 [{selected_subject}] 성적 비교')
             plt.grid(True, linestyle='--', alpha=0.3, axis='y')
             plt.tight_layout()
             plt.savefig('chart2.png', dpi=200)
@@ -140,27 +146,27 @@ if len(edited_df) >= 2:
             
             time.sleep(0.5)
             
+            # 서버 OS 환경 종속적 폰트 주소를 지우고 기본 내장 폰트(Helvetica)로 우회 
             pdf = FPDF(orientation="P", unit="mm", format="A4")
-            font_path = r"C:\Windows\Fonts\batang.ttc"
-            pdf.add_font("Batang", "", font_path, uni=True)
             pdf.add_page()
             
-            pdf.set_font("Batang", "", 22)
+            # 표준 폰트로 변환하여 인프라 다운 방지
+            pdf.set_font("Helvetica", "B", 20)
             pdf.cell(190, 15, f"STUDENT PERFORMANCE ANALYTICS REPORT", ln=True, align="C")
             pdf.set_draw_color(31, 119, 180)
             pdf.line(10, 27, 200, 27)
             pdf.ln(10)
             
-            pdf.set_font("Batang", "", 12)
+            pdf.set_font("Helvetica", "", 12)
             pdf.cell(190, 8, f"[ANALYSIS INFO] Target Subject: {selected_subject}", ln=True)
-            pdf.cell(190, 8, f"[ANALYSIS INFO] Total Class Average: {round(total_avg, 2)} 점", ln=True)
-            pdf.cell(190, 8, f"[ANALYSIS INFO] Highest Score: {int(max_score)} 점", ln=True)
+            pdf.cell(190, 8, f"[ANALYSIS INFO] Total Class Average: {round(total_avg, 2)} points", ln=True)
+            pdf.cell(190, 8, f"[ANALYSIS INFO] Highest Score: {int(max_score)} points", ln=True)
             pdf.ln(5)
             pdf.image("chart1.png", x=15, y=65, w=180)
             
             pdf.add_page()
-            pdf.set_font("Batang", "", 14)
-            pdf.cell(190, 10, f"Analysis 02. Recent Exam Score Comparison Map", ln=True)
+            pdf.set_font("Helvetica", "B", 14)
+            pdf.cell(190, 10, f"Section 02. Recent Exam Score Comparison Map", ln=True)
             pdf.line(10, 22, 200, 22)
             pdf.ln(5)
             pdf.image("chart2.png", x=15, y=30, w=180)
@@ -169,17 +175,18 @@ if len(edited_df) >= 2:
             os.remove("chart1.png")
             os.remove("chart2.png")
             
-            st.success(f"🎉 성공! [{selected_subject}] 성적 분석이 반영된 맞춤형 교사용 PDF 보고서가 완성되었습니다!")
+            st.success(f"🎉 성공! [{selected_subject}] 분석이 반영된 맞춤형 교사용 PDF 보고서가 완성되었습니다!")
             
             with open("student_perf_report.pdf", "rb") as f:
                 st.download_button(
                     label="📥 성적 분석 마스터 리포트 다운로드",
                     data=f,
-                    file_name=f"학생_성적_종합_분석_보고서({selected_subject}).pdf",
+                    file_name=f"Student_Report_{selected_subject}.pdf",
                     mime="application/pdf"
                 )
         except Exception as e:
             st.error(f"PDF 리포트 생성 중 오류가 났습니다: {e}")
 else:
     st.warning("⚠️ 분석을 가동하려면 최소 2개 이상의 데이터 행이 필요합니다.")
+
 
