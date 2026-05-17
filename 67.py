@@ -23,19 +23,18 @@ def load_korean_font():
 
 font_file = load_korean_font()
 
-# 그래프용 한글 폰트 강제 등록
+# 💡 [버그 교정] 버전 영향 없는 안전한 폰트 프로퍼티 생성 방식 적용
 if os.path.exists(font_file):
-    fe = fm.FontEntry(font_path=font_file, name='NanumGothicWeb')
-    fm.font_manager.ttflist.insert(0, fe)
-    plt.rcParams['font.family'] = 'NanumGothicWeb'
+    korean_font_prop = fm.FontProperties(fname=font_file)
+    # 기본 글꼴 전역 설정은 우회하고, 그래프를 그릴 때 이 프로퍼티를 직접 주입합니다.
 plt.rcParams['axes.unicode_minus'] = False
 
 # 1. 시스템 레이아웃 세팅
 st.set_page_config(page_title="학교 맞춤형 성적 데이터 분석 시스템", layout="wide")
 st.title("🏫 교사용 학생 성적 분석 및 추이 예측 시스템 (실무형)")
-st.write("선생님들이 엑셀을 올리면 학생별 성적 추이를 분석하고, 학부모 상담용 한글 PDF 보고서를 즉시 출력합니다.")
+st.write("선행 선생님들이 엑셀을 올리면 학생별 성적 추이를 분석하고, 학부모 상담용 한글 PDF 보고서를 즉시 출력합니다.")
 
-# 2. 기초 데이터 세팅 (★비어있던 점수 채워 오타 수정 완료!)
+# 2. 기초 데이터 세팅
 if 'sales_data' not in st.session_state:
     st.session_state.sales_data = pd.DataFrame({
         '이름': ['김철수', '김철수', '이영희', '이영희'],
@@ -132,24 +131,42 @@ if len(edited_df) >= 2:
             import time
             
             # 1번 그래프 생성 (선형 추이)
-            plt.figure(figsize=(7, 4))
+            fig, ax = plt.subplots(figsize=(7, 4))
             for name, group in df.groupby('이름'):
                 group_sorted = group.sort_values(by='날짜')
-                plt.plot(group_sorted['날짜'].dt.strftime('%Y-%m-%d'), group_sorted[selected_subject], marker='o', label=name, linewidth=2)
-            plt.title(f'날짜별 [{selected_subject}] 성적 변동 추이')
-            plt.legend()
-            plt.grid(True, linestyle='--', alpha=0.5)
+                ax.plot(group_sorted['날짜'].dt.strftime('%Y-%m-%d'), group_sorted[selected_subject], marker='o', label=name, linewidth=2)
+            
+            # 💡 한글 지정 프로퍼티 직접 주입으로 에러 완전 예외 처리
+            if os.path.exists(font_file):
+                ax.set_title(f'날짜별 [{selected_subject}] 성적 변동 추이', fontproperties=korean_font_prop, fontsize=14)
+                ax.set_xlabel('시험 날짜', fontproperties=korean_font_prop)
+                ax.set_ylabel('점수', fontproperties=korean_font_prop)
+                ax.legend(prop=korean_font_prop)
+            else:
+                ax.set_title(f'Trend of {selected_subject}')
+                ax.legend()
+                
+            ax.grid(True, linestyle='--', alpha=0.5)
             plt.tight_layout()
             plt.savefig('chart1.png', dpi=200)
             plt.close()
             
             # 2번 그래프 생성 (막대그래프)
-            plt.figure(figsize=(7, 4))
+            fig, ax = plt.subplots(figsize=(7, 4))
             latest_date = df['날짜'].max()
             df_latest = df[df['날짜'] == latest_date]
-            plt.bar(df_latest['이름'], df_latest[selected_subject], color='#1f77b4', alpha=0.8)
-            plt.title(f'최근 시험 [{selected_subject}] 성적 비교')
-            plt.grid(True, linestyle='--', alpha=0.3, axis='y')
+            ax.bar(df_latest['이름'], df_latest[selected_subject], color='#1f77b4', alpha=0.8)
+            
+            # 💡 한글 지정 프로퍼티 직접 주입
+            if os.path.exists(font_file):
+                ax.set_title(f'최근 시험 [{selected_subject}] 성적 비교', fontproperties=korean_font_prop, fontsize=14)
+                ax.set_ylabel('점수', fontproperties=korean_font_prop)
+                for ticket in ax.get_xticklabels():
+                    ticket.set_fontproperties(korean_font_prop)
+            else:
+                ax.set_title(f'Recent Exam Comparison')
+                
+            ax.grid(True, linestyle='--', alpha=0.3, axis='y')
             plt.tight_layout()
             plt.savefig('chart2.png', dpi=200)
             plt.close()
@@ -202,5 +219,3 @@ if len(edited_df) >= 2:
             st.error(f"PDF 리포트 생성 중 오류가 났습니다: {e}")
 else:
     st.warning("⚠️ 분석을 가동하려면 최소 2개 이상의 데이터 행이 필요합니다.")
-
-
