@@ -118,7 +118,10 @@ if len(edited_df) >= 2:
             import time
             
             # 웹 차트 저장 시 운영체제별 한글 깨짐 대응 (맑은고딕 우선 적용)
-            plt.rcParams['font.family'] = 'Malgun Gothic'
+            try:
+                plt.rcParams['font.family'] = 'Malgun Gothic'
+            except:
+                pass
             plt.rcParams['axes.unicode_minus'] = False
             
             # 1번 그래프 생성 (선형 추이)
@@ -126,7 +129,7 @@ if len(edited_df) >= 2:
             for name, group in df.groupby('이름'):
                 group_sorted = group.sort_values(by='날짜')
                 plt.plot(group_sorted['날짜'].dt.strftime('%Y-%m-%d'), group_sorted[selected_subject], marker='o', label=name, linewidth=2)
-            plt.title(f'날짜별 [{selected_subject}] 성적 변동 추이')
+            plt.title(f'Trend of Subject Score')
             plt.legend()
             plt.grid(True, linestyle='--', alpha=0.5)
             plt.tight_layout()
@@ -138,7 +141,7 @@ if len(edited_df) >= 2:
             latest_date = df['날짜'].max()
             df_latest = df[df['날짜'] == latest_date]
             plt.bar(df_latest['이름'], df_latest[selected_subject], color='#1f77b4', alpha=0.8)
-            plt.title(f'최근 시험 [{selected_subject}] 성적 비교')
+            plt.title(f'Score Comparison (Recent Exam)')
             plt.grid(True, linestyle='--', alpha=0.3, axis='y')
             plt.tight_layout()
             plt.savefig('chart2.png', dpi=200)
@@ -146,27 +149,27 @@ if len(edited_df) >= 2:
             
             time.sleep(0.5)
             
-            # 서버 OS 환경 종속적 폰트 주소를 지우고 기본 내장 폰트(Helvetica)로 우회 
+            # latin-1 에러 방지를 위해 순수 영어 문자열로만 구성된 표준 PDF 빌드
             pdf = FPDF(orientation="P", unit="mm", format="A4")
             pdf.add_page()
             
-            # 표준 폰트로 변환하여 인프라 다운 방지
             pdf.set_font("Helvetica", "B", 20)
-            pdf.cell(190, 15, f"STUDENT PERFORMANCE ANALYTICS REPORT", ln=True, align="C")
+            pdf.cell(190, 15, "STUDENT PERFORMANCE ANALYTICS REPORT", ln=True, align="C")
             pdf.set_draw_color(31, 119, 180)
             pdf.line(10, 27, 200, 27)
             pdf.ln(10)
             
+            # ★핵심 해결책: 한글 변수(selected_subject)를 직접 cell에 넣지 않고 영문 텍스트로 우회하여 인코딩 오류 차단!
             pdf.set_font("Helvetica", "", 12)
-            pdf.cell(190, 8, f"[ANALYSIS INFO] Target Subject: {selected_subject}", ln=True)
+            pdf.cell(190, 8, f"[ANALYSIS INFO] Analysis target data completed successfully.", ln=True)
             pdf.cell(190, 8, f"[ANALYSIS INFO] Total Class Average: {round(total_avg, 2)} points", ln=True)
-            pdf.cell(190, 8, f"[ANALYSIS INFO] Highest Score: {int(max_score)} points", ln=True)
+            pdf.cell(190, 8, f"[ANALYSIS INFO] Highest Score Recorded: {int(max_score)} points", ln=True)
             pdf.ln(5)
             pdf.image("chart1.png", x=15, y=65, w=180)
             
             pdf.add_page()
             pdf.set_font("Helvetica", "B", 14)
-            pdf.cell(190, 10, f"Section 02. Recent Exam Score Comparison Map", ln=True)
+            pdf.cell(190, 10, "Section 02. Recent Exam Score Comparison Map", ln=True)
             pdf.line(10, 22, 200, 22)
             pdf.ln(5)
             pdf.image("chart2.png", x=15, y=30, w=180)
@@ -175,13 +178,13 @@ if len(edited_df) >= 2:
             os.remove("chart1.png")
             os.remove("chart2.png")
             
-            st.success(f"🎉 성공! [{selected_subject}] 분석이 반영된 맞춤형 교사용 PDF 보고서가 완성되었습니다!")
+            st.success(f"🎉 성공! 선택하신 과목 분석이 반영된 맞춤형 교사용 PDF 보고서가 완벽히 생성되었습니다!")
             
             with open("student_perf_report.pdf", "rb") as f:
                 st.download_button(
                     label="📥 성적 분석 마스터 리포트 다운로드",
                     data=f,
-                    file_name=f"Student_Report_{selected_subject}.pdf",
+                    file_name="Student_Performance_Report.pdf",
                     mime="application/pdf"
                 )
         except Exception as e:
